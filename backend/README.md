@@ -102,6 +102,18 @@ The app provides `POST /api/v1/auth/password/forgot` and `POST /api/v1/auth/pass
 
 Patient platform feedback is saved for administrator review and sent by email when SMTP is configured. `FEEDBACK_RECIPIENT_EMAIL` defaults to `sanjays60641@gmail.com`; patient submissions use `POST /api/v1/feedback/`. Configure the Gmail App Password settings above to enable email delivery. If SMTP is missing or delivery fails, feedback remains saved and appears in the administrator dashboard under **Patient feedback**. Administrators can retry email delivery after correcting the SMTP settings.
 
+### Deploying to Vercel
+
+Deploy the API and Vite frontend as separate Vercel projects from this repository:
+
+1. Create a Vercel project with its Root Directory set to `backend`. Vercel detects the FastAPI application and uses `backend/requirements.txt`.
+2. Connect a hosted PostgreSQL database through Vercel Marketplace; the local SQLite database is not persistent in Vercel Functions. Set `DATABASE_URL` for Production, plus a unique `JWT_SECRET_KEY`, `ADMIN_EMAIL`, and a new private `ADMIN_PASSWORD`.
+3. Set `FRONTEND_BASE_URL` and `BACKEND_CORS_ORIGINS` in the API project to the deployed frontend origin. Set SMTP variables if password reset and email forwarding are required.
+4. Create a second Vercel project with Root Directory `frontend`, and set `VITE_API_BASE_URL` to `https://<api-project-domain>/api/v1` for Production.
+5. Run `python init_db.py` once with the Production environment variables to seed the initial administrator and departments.
+
+The backend currently saves profile photos to local disk. Vercel Function filesystems are ephemeral, so profile-photo uploads need a persistent object-storage integration before they can be relied on in production. Do not store real patient health information on a demo deployment; use production infrastructure only after reviewing applicable privacy, security, and compliance requirements.
+
 ---
 
 ## 📄 License
