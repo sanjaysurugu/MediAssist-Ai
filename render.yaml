@@ -19,11 +19,11 @@ services:
         generateValue: true
       - key: FRONTEND_BASE_URL
         fromService:
-          type: static
+          type: static_site
           name: mediassist-ai-web
           property: host
 
-  - type: static
+  - type: static_site
     name: mediassist-ai-web
     rootDir: frontend
     buildCommand: npm ci && VITE_API_BASE_URL="https://${API_HOST}/api/v1" npm run build
