@@ -67,6 +67,13 @@ class Settings(BaseSettings):
             return self.DATABASE_URL
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
+    @property
+    def frontend_url(self) -> str:
+        url = self.FRONTEND_BASE_URL.strip().rstrip("/")
+        if url and "://" not in url:
+            return f"https://{url}"
+        return url
+
 
 # Instantiated global settings object
 settings = Settings()

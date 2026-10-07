@@ -102,17 +102,13 @@ The app provides `POST /api/v1/auth/password/forgot` and `POST /api/v1/auth/pass
 
 Patient platform feedback is saved for administrator review and sent by email when SMTP is configured. `FEEDBACK_RECIPIENT_EMAIL` defaults to `sanjays60641@gmail.com`; patient submissions use `POST /api/v1/feedback/`. Configure the Gmail App Password settings above to enable email delivery. If SMTP is missing or delivery fails, feedback remains saved and appears in the administrator dashboard under **Patient feedback**. Administrators can retry email delivery after correcting the SMTP settings.
 
-### Deploying to Vercel
+### Deploying to Render
 
-Deploy the API and Vite frontend as separate Vercel projects from this repository:
+The root `render.yaml` Blueprint deploys the FastAPI API and Vite frontend as separate Render services. Select **New > Blueprint** in Render and connect this repository. During initial setup, provide the existing Neon PostgreSQL `DATABASE_URL`; Render generates a fresh `JWT_SECRET_KEY`. The Blueprint shares the API and frontend hostnames so the frontend API URL and backend CORS origin stay aligned.
 
-1. Create a Vercel project with its Root Directory set to `backend`. Vercel detects the FastAPI application and uses `backend/requirements.txt`.
-2. Connect a hosted PostgreSQL database through Vercel Marketplace; the local SQLite database is not persistent in Vercel Functions. Set `DATABASE_URL` for Production, plus a unique `JWT_SECRET_KEY`, `ADMIN_EMAIL`, and a new private `ADMIN_PASSWORD`.
-3. Set `FRONTEND_BASE_URL` and `BACKEND_CORS_ORIGINS` in the API project to the deployed frontend origin. Set SMTP variables if password reset and email forwarding are required.
-4. Create a second Vercel project with Root Directory `frontend`, and set `VITE_API_BASE_URL` to `https://<api-project-domain>/api/v1` for Production.
-5. Run `python init_db.py` once with the Production environment variables to seed the initial administrator and departments.
+The existing Neon database already contains the seeded administrator and departments. Keep the same database when deploying this app; do not run `init_db.py` against a new production database until you intend to initialize it. Configure SMTP environment variables in the API service to enable password-reset and feedback emails.
 
-The backend currently saves profile photos to local disk. Vercel Function filesystems are ephemeral, so profile-photo uploads need a persistent object-storage integration before they can be relied on in production. Do not store real patient health information on a demo deployment; use production infrastructure only after reviewing applicable privacy, security, and compliance requirements.
+The Blueprint uses Render's free web-service plan, which sleeps when idle and has an ephemeral filesystem. Profile-photo uploads are not persistent across restarts, and the first API request after inactivity can take about a minute. For reliable availability and file persistence, select a paid service plan and connect persistent object storage. Do not store real patient health information on a demo deployment; review applicable privacy, security, and compliance requirements before production use.
 
 ---
 

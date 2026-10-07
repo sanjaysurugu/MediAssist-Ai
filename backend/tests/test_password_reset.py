@@ -4,10 +4,27 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.api.v1.endpoints import auth as auth_endpoint
+from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models.password_reset import PasswordResetToken
 from app.models.user import User, UserRole
 from tests.conftest import TestingSessionLocal
+
+
+@pytest.mark.parametrize(
+    ("configured_url", "expected_url"),
+    [
+        ("mediassist-ai-web.onrender.com", "https://mediassist-ai-web.onrender.com"),
+        ("https://mediassist-ai-web.onrender.com/", "https://mediassist-ai-web.onrender.com"),
+        ("http://localhost:5175", "http://localhost:5175"),
+    ],
+)
+def test_frontend_url_normalizes_host_and_trailing_slash(
+    monkeypatch, configured_url, expected_url
+):
+    monkeypatch.setattr(settings, "FRONTEND_BASE_URL", configured_url)
+
+    assert settings.frontend_url == expected_url
 
 
 def create_user(role: UserRole, email: str) -> None:

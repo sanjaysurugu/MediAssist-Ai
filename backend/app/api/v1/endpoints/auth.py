@@ -258,7 +258,7 @@ def request_password_reset(
     db.commit()
 
     reset_url = (
-        f"{settings.FRONTEND_BASE_URL.rstrip('/')}/"
+        f"{settings.frontend_url}/"
         f"#reset-password/{raw_token}"
     )
     try:

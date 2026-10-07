@@ -9,7 +9,7 @@ def password_reset_email_configured() -> bool:
         and settings.SMTP_USER
         and settings.SMTP_PASSWORD
         and settings.SMTP_FROM_EMAIL
-        and settings.FRONTEND_BASE_URL
+        and settings.frontend_url
     )
 
 
