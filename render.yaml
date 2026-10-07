@@ -18,10 +18,7 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: FRONTEND_BASE_URL
-        fromService:
-          type: web
-          name: mediassist-ai-web
-          property: url
+        value: https://mediassist-ai-web.onrender.com
 
   - type: web
     name: mediassist-ai-web
