@@ -21,7 +21,7 @@ services:
         fromService:
           type: web
           name: mediassist-ai-web
-          property: host
+          property: url
 
   - type: web
     name: mediassist-ai-web
