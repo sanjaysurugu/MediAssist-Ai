@@ -1,5 +1,7 @@
 from app.core.security import get_password_hash
+from app.api.v1.endpoints import doctors as doctors_endpoint
 from app.models.user import User, UserRole
+from app.models.profile import DoctorProfile
 from app.api.v1.endpoints import users as users_endpoint
 from tests.conftest import TestingSessionLocal
 
@@ -105,3 +107,49 @@ def test_avatar_upload_rejects_non_image_content(client):
     )
 
     assert response.status_code == 400
+
+
+def test_doctor_directory_includes_public_profile_photo(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(doctors_endpoint, "AVATAR_DIRECTORY", tmp_path)
+    image_content = b"\x89PNG\r\n\x1a\nprofile photo"
+    avatar_filename = "doctor-profile.png"
+    (tmp_path / avatar_filename).write_bytes(image_content)
+
+    db = TestingSessionLocal()
+    doctor = User(
+        full_name="Profile Photo Doctor",
+        email="profile.photo.doctor@example.com",
+        password_hash=get_password_hash("AvatarSecret123!"),
+        role=UserRole.DOCTOR,
+        is_active=True,
+        is_verified=True,
+        avatar_url=avatar_filename,
+    )
+    doctor_profile = DoctorProfile(
+        user=doctor,
+        specialization="Cardiology",
+        license_number="PHOTO-DOCTOR-001",
+        experience_years=5,
+        consultation_fee=50,
+        available=True,
+    )
+    db.add(doctor_profile)
+    db.commit()
+    db.refresh(doctor_profile)
+    doctor_profile_id = doctor_profile.id
+    db.close()
+
+    listing = client.get("/api/v1/doctors/")
+    assert listing.status_code == 200
+    doctor_card = next(
+        item for item in listing.json() if item["id"] == str(doctor_profile_id)
+    )
+    assert doctor_card["avatar_url"] == f"/doctors/{doctor_profile_id}/avatar"
+    detail = client.get(f"/api/v1/doctors/{doctor_profile_id}")
+    assert detail.status_code == 200
+    assert detail.json()["avatar_url"] == doctor_card["avatar_url"]
+
+    photo = client.get(f"/api/v1{doctor_card['avatar_url']}")
+    assert photo.status_code == 200
+    assert photo.headers["content-type"] == "image/png"
+    assert photo.content == image_content

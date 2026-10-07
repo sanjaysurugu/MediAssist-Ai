@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -13,6 +15,7 @@ from app.schemas.user import DoctorPublicOut
 from app.services.audit_service import log_action
 
 router = APIRouter()
+AVATAR_DIRECTORY = Path(__file__).resolve().parents[4] / "uploads" / "avatars"
 
 
 @router.get("/", response_model=List[DoctorPublicOut])
@@ -66,6 +69,7 @@ def search_doctors(
             full_name=u.full_name,
             email=u.email,
             phone=u.phone,
+            avatar_url=f"/doctors/{doc.id}/avatar" if u.avatar_url else None,
             specialization=doc.specialization,
             license_number=doc.license_number,
             experience_years=doc.experience_years,
@@ -77,6 +81,39 @@ def search_doctors(
             department=doc.department
         ))
     return results
+
+
+@router.get("/{doctor_id}/avatar")
+def get_doctor_avatar(doctor_id: UUID, db: Session = Depends(get_db)):
+    doctor = db.query(DoctorProfile).filter(
+        (DoctorProfile.id == doctor_id) | (DoctorProfile.user_id == doctor_id)
+    ).first()
+    if (
+        not doctor
+        or not doctor.user
+        or doctor.user.role != UserRole.DOCTOR
+        or not doctor.user.is_active
+        or not doctor.user.avatar_url
+        or Path(doctor.user.avatar_url).name != doctor.user.avatar_url
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor photo not found.")
+
+    avatar_path = AVATAR_DIRECTORY / doctor.user.avatar_url
+    if not avatar_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor photo not found.")
+    media_type = {
+        ".jpg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }.get(avatar_path.suffix.lower())
+    if not media_type:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor photo not found.")
+
+    return FileResponse(
+        avatar_path,
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=300"}
+    )
 
 
 @router.get("/{doctor_id}", response_model=DoctorPublicOut)
@@ -102,6 +139,7 @@ def get_doctor_by_id(doctor_id: UUID, db: Session = Depends(get_db)):
         full_name=u.full_name,
         email=u.email,
         phone=u.phone,
+        avatar_url=f"/doctors/{doc.id}/avatar" if u.avatar_url else None,
         specialization=doc.specialization,
         license_number=doc.license_number,
         experience_years=doc.experience_years,

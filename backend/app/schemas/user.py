@@ -76,6 +76,7 @@ class DoctorPublicOut(BaseModel):
     full_name: str
     email: EmailStr
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     specialization: str
     license_number: str
     experience_years: int

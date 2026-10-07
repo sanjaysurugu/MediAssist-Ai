@@ -42,6 +42,33 @@ function UserAvatar({ user, size = 'h-10 w-10', imageClassName = '' }) {
     : <span aria-label={`${user?.full_name || 'User'} profile photo placeholder`} className={`${size} flex shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-800 ${imageClassName}`}>{initials}</span>;
 }
 
+function DoctorAvatar({ doctor }) {
+  const [imageUrl, setImageUrl] = useState('');
+  const initials = doctor.full_name.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase() || '?';
+  useEffect(() => {
+    if (!doctor.avatar_url) {
+      setImageUrl('');
+      return undefined;
+    }
+    let active = true;
+    let objectUrl;
+    API.get(doctor.avatar_url, { responseType: 'blob' })
+      .then(({ data }) => {
+        objectUrl = URL.createObjectURL(data);
+        if (active) setImageUrl(objectUrl);
+        else URL.revokeObjectURL(objectUrl);
+      })
+      .catch(() => { if (active) setImageUrl(''); });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [doctor.avatar_url]);
+  return imageUrl
+    ? <img src={imageUrl} alt={`Dr. ${doctor.full_name} profile`} className="h-16 w-16 shrink-0 rounded-full border-2 border-white object-cover shadow-sm" />
+    : <span aria-label={`${doctor.full_name} profile photo placeholder`} className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-sky-100 text-lg font-bold text-sky-800">{initials}</span>;
+}
+
 function Field({ label, ...props }) {
   return <label className="block text-sm font-medium text-slate-700">{label}<input className={inputClass} {...props} /></label>;
 }
@@ -251,7 +278,7 @@ function Doctors({ canBook, onBook }) {
     <select className={inputClass} value={department} onChange={(e) => setDepartment(e.target.value)}><option value="">All departments</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
     <button className={buttonClass} disabled={busy}>{busy ? 'Searching…' : 'Search'}</button>
   </form><Notice error={error} />
-    {doctors.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{doctors.map((d) => <article key={d.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Stethoscope /></div>{d.is_verified ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><Check size={13} /> Verified</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Verification pending</span>}</div><h2 className="mt-4 text-lg font-bold text-slate-900">Dr. {d.full_name}</h2><p className="text-sm text-sky-700">{d.specialization}</p><p className="mt-3 text-sm text-slate-600">{d.department?.name || 'General care'} · {d.experience_years} years experience</p><p className="mt-1 text-sm text-slate-600">{d.qualification || 'Qualification not listed'} · Fee: {d.consultation_fee}</p>{d.bio && <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">{d.bio}</p>}<div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><span className={cx('text-xs font-semibold', d.available ? 'text-emerald-700' : 'text-slate-500')}>{d.available ? 'Available for booking' : 'Currently unavailable'}</span><button className={secondaryButtonClass} onClick={() => onBook(d)} disabled={!d.available || !canBook}>{canBook ? 'Book appointment' : 'Patient booking only'}</button></div></article>)}</div> : !busy && !error ? <Empty title="No doctors found" detail="Try changing your search or department filters." /> : null}
+    {doctors.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{doctors.map((d) => <article key={d.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><DoctorAvatar doctor={d} />{d.is_verified ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><Check size={13} /> Verified</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Verification pending</span>}</div><h2 className="mt-4 text-lg font-bold text-slate-900">Dr. {d.full_name}</h2><p className="text-sm text-sky-700">{d.specialization}</p><p className="mt-3 text-sm text-slate-600">{d.department?.name || 'General care'} · {d.experience_years} years experience</p><p className="mt-1 text-sm text-slate-600">{d.qualification || 'Qualification not listed'} · Fee: {d.consultation_fee}</p>{d.bio && <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">{d.bio}</p>}<div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4"><span className={cx('text-xs font-semibold', d.available ? 'text-emerald-700' : 'text-slate-500')}>{d.available ? 'Available for booking' : 'Currently unavailable'}</span><button className={secondaryButtonClass} onClick={() => onBook(d)} disabled={!d.available || !canBook}>{canBook ? 'Book appointment' : 'Patient booking only'}</button></div></article>)}</div> : !busy && !error ? <Empty title="No doctors found" detail="Try changing your search or department filters." /> : null}
   </section>;
 }
 
