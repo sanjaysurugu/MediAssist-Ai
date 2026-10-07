@@ -1,0 +1,30 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Local databases and uploaded patient data
+*.db
+*.sqlite
+*.sqlite3
+backend/uploads/
+
+# Frontend dependencies and build output
+node_modules/
+frontend/dist/
+.vite/
+
+# Editor and operating-system files
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.log
