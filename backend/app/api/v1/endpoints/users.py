@@ -3,14 +3,14 @@ from typing import List, Optional
 from uuid import UUID
 import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
 from app.models.department import Department
 from app.models.profile import DoctorProfile, PatientProfile
-from app.models.user import User, UserRole
+from app.models.user import User, UserAvatar, UserRole
 from app.schemas.profile import DoctorProfileOut, DoctorProfileUpdate, PatientProfileOut, PatientProfileUpdate
 from app.schemas.user import UserOut, UserUpdate
 from app.services.audit_service import log_action
@@ -53,19 +53,22 @@ async def upload_my_avatar(
             detail="The uploaded file does not match its image type."
         )
 
-    AVATAR_DIRECTORY.mkdir(parents=True, exist_ok=True)
     filename = f"{current_user.id}-{uuid.uuid4().hex}{extension}"
-    destination = AVATAR_DIRECTORY / filename
-    destination.write_bytes(content)
 
     previous_filename = current_user.avatar_url
     current_user.avatar_url = filename
+    avatar = db.query(UserAvatar).filter(UserAvatar.user_id == current_user.id).first()
+    if avatar is None:
+        avatar = UserAvatar(user_id=current_user.id)
+        db.add(avatar)
+    avatar.content_type = content_type
+    avatar.image_data = content
     db.commit()
     db.refresh(current_user)
 
     if previous_filename and Path(previous_filename).name == previous_filename:
         previous_file = AVATAR_DIRECTORY / previous_filename
-        if previous_file != destination and previous_file.is_file():
+        if previous_file.is_file():
             previous_file.unlink()
 
     log_action(
@@ -93,6 +96,14 @@ def get_user_avatar(
     if not target_user.avatar_url or Path(target_user.avatar_url).name != target_user.avatar_url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile photo not found.")
 
+    avatar = db.query(UserAvatar).filter(UserAvatar.user_id == target_user.id).first()
+    if avatar:
+        return Response(
+            content=avatar.image_data,
+            media_type=avatar.content_type,
+            headers={"Cache-Control": "private, no-store"}
+        )
+
     avatar_path = AVATAR_DIRECTORY / target_user.avatar_url
     if not avatar_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile photo not found.")
@@ -118,6 +129,9 @@ def delete_my_avatar(
 ):
     previous_filename = current_user.avatar_url
     current_user.avatar_url = None
+    avatar = db.query(UserAvatar).filter(UserAvatar.user_id == current_user.id).first()
+    if avatar:
+        db.delete(avatar)
     db.commit()
     db.refresh(current_user)
 

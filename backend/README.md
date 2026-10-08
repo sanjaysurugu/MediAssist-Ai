@@ -92,7 +92,7 @@ Run the complete integration test suite covering Phases 1–5:
 python -m pytest tests -v
 ```
 
-Profile photos are uploaded through `POST /api/v1/users/me/avatar` and can be removed through `DELETE /api/v1/users/me/avatar`. Photos are stored locally and served through the authenticated `GET /api/v1/users/{user_id}/avatar` endpoint; only the photo owner and administrators can retrieve them. The application adds the nullable `avatar_url` field to existing user tables at startup.
+Profile photos are uploaded through `POST /api/v1/users/me/avatar` and can be removed through `DELETE /api/v1/users/me/avatar`. Photo bytes are stored in the database and served through the authenticated `GET /api/v1/users/{user_id}/avatar` endpoint; only the photo owner and administrators can retrieve them. Public doctor directory photos use `GET /api/v1/doctors/{doctor_id}/avatar`. Existing `avatar_url` values and local photo files remain supported for compatibility.
 
 ### Patient and Doctor Password Reset
 
@@ -108,7 +108,7 @@ The root `render.yaml` Blueprint deploys the FastAPI API and Vite frontend as se
 
 The existing Neon database already contains the seeded administrator and departments. Keep the same database when deploying this app; do not run `init_db.py` against a new production database until you intend to initialize it. Configure SMTP environment variables in the API service to enable password-reset and feedback emails.
 
-The Blueprint uses Render's free web-service plan, which sleeps when idle and has an ephemeral filesystem. Profile-photo uploads are not persistent across restarts, and the first API request after inactivity can take about a minute. For reliable availability and file persistence, select a paid service plan and connect persistent object storage. Do not store real patient health information on a demo deployment; review applicable privacy, security, and compliance requirements before production use.
+The Blueprint uses Render's free web-service plan, which sleeps when idle and has an ephemeral filesystem. New profile photos are stored in the configured PostgreSQL database, so they remain available after service restarts and redeployments. The first API request after inactivity can still take about a minute. Do not store real patient health information on a demo deployment; review applicable privacy, security, and compliance requirements before production use.
 
 ---
 

@@ -2,14 +2,14 @@ from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
 from app.models.department import Department
 from app.models.profile import DoctorProfile
-from app.models.user import User, UserRole
+from app.models.user import User, UserAvatar, UserRole
 from app.schemas.profile import DoctorAvailabilityUpdate, DoctorProfileOut, DoctorProfileUpdate
 from app.schemas.user import DoctorPublicOut
 from app.services.audit_service import log_action
@@ -97,6 +97,14 @@ def get_doctor_avatar(doctor_id: UUID, db: Session = Depends(get_db)):
         or Path(doctor.user.avatar_url).name != doctor.user.avatar_url
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Doctor photo not found.")
+
+    avatar = db.query(UserAvatar).filter(UserAvatar.user_id == doctor.user_id).first()
+    if avatar:
+        return Response(
+            content=avatar.image_data,
+            media_type=avatar.content_type,
+            headers={"Cache-Control": "public, max-age=300"}
+        )
 
     avatar_path = AVATAR_DIRECTORY / doctor.user.avatar_url
     if not avatar_path.is_file():
